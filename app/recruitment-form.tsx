@@ -86,8 +86,8 @@ export function RecruitmentForm() {
               <label><span>姓名 *</span><input name="name" required placeholder="请输入真实姓名" /></label>
               <label><span>性别 *</span><select name="gender" required defaultValue=""><option value="" disabled>请选择</option><option>男</option><option>女</option><option>其他</option></select></label>
               <label><span>学号 *</span><input name="studentId" required inputMode="numeric" placeholder="请输入学号" /></label>
-              <label><span>学院 *</span><input name="college" required placeholder="例如：计算机学院" /></label>
-              <label><span>专业班级 *</span><input name="majorClass" required placeholder="例如：软件工程 2601" /></label>
+              <label><span>学院 *</span><input name="college" required placeholder="例如：中国金融学院" /></label>
+              <label><span>专业班级 *</span><input name="majorClass" required placeholder="例如：国金2601" /></label>
               <label><span>政治面貌</span><select name="politicalStatus" defaultValue="群众"><option>群众</option><option>共青团员</option><option>中共预备党员</option><option>中共党员</option></select></label>
               <label><span>手机号码 *</span><input name="phone" required inputMode="tel" pattern="1[3-9][0-9]{9}" placeholder="11 位手机号" /></label>
               <label><span>微信号 *</span><input name="wechat" required placeholder="用于后续联系" /></label>
