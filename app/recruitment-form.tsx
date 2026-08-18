@@ -114,9 +114,9 @@ export function RecruitmentForm() {
           </div>
 
           <div className={step === 3 ? "panel active" : "panel"}>
-            <label><span>个人简介 *</span><textarea name="introduction" required minLength={20} placeholder="请简单介绍你的性格、特长、兴趣爱好等（不少于 20 字）" /></label>
+            <label><span>个人简介</span><textarea name="introduction" placeholder="请简单介绍你的性格、特长、兴趣爱好等（选填）" /></label>
             <label><span>相关经历</span><textarea name="experience" placeholder="社团、学生工作、项目或比赛经历，选填" /></label>
-            <label><span>加入青年科创中心的期待 *</span><textarea name="expectation" required minLength={10} placeholder="你希望在这里收获什么？又想带来什么？" /></label>
+            <label><span>加入青年科创中心的期待</span><textarea name="expectation" placeholder="你希望在这里收获什么？又想带来什么？（选填）" /></label>
             <label className="consent"><input type="checkbox" required /><span>我确认以上信息真实有效，并同意仅将信息用于本次招新联络与选拔。</span></label>
             {error && <p className="error">{error}</p>}
             <div className="actions"><button className="back" type="button" onClick={() => setStep(2)}>上一步</button><button type="submit" disabled={busy}>{busy ? "正在提交…" : "确认提交报名"}</button></div>

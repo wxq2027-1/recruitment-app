@@ -2,7 +2,7 @@ import { applications } from "@/db/schema";
 import { getDb } from "@/db";
 
 const departments = ["办公室", "科研立项部", "培训发展部", "对外联络部", "策划宣传部", "赛事组织部"];
-const required = ["name", "gender", "studentId", "college", "majorClass", "phone", "wechat", "choice1", "choice2", "choice3", "introduction", "expectation"] as const;
+const required = ["name", "gender", "studentId", "college", "majorClass", "phone", "wechat", "choice1", "choice2", "choice3"] as const;
 
 export async function POST(request: Request) {
   try {
