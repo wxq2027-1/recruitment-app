@@ -12,16 +12,80 @@ export function RecruitmentForm() {
   const [choices, setChoices] = useState(["", "", ""]);
   const available = useMemo(() => departments, []);
 
-  async function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  function validatePersonal(form: HTMLFormElement) {
+    const data = new FormData(form);
+    const requiredFields = [
+      ["name", "姓名"],
+      ["gender", "性别"],
+      ["studentId", "学号"],
+      ["college", "学院"],
+      ["majorClass", "专业班级"],
+      ["phone", "手机号码"],
+      ["wechat", "微信号"],
+    ] as const;
+    const missing = requiredFields.find(([name]) => !String(data.get(name) ?? "").trim());
+    if (missing) return `请填写${missing[1]}。`;
+
+    const phone = String(data.get("phone") ?? "").trim();
+    if (!/^1[3-9]\d{9}$/.test(phone)) return "请输入正确的 11 位手机号码。";
+
+    const email = String(data.get("email") ?? "").trim();
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return "请输入正确的常用邮箱，或将邮箱留空。";
+    return "";
+  }
+
+  function goToChoices(form: HTMLFormElement | null) {
+    if (!form) return;
+    const message = validatePersonal(form);
+    if (message) {
+      setError(message);
+      setStep(1);
+      return;
+    }
     setError("");
+    setStep(2);
+  }
+
+  function goToIntroduction(form: HTMLFormElement | null) {
+    if (!form) return;
+    const message = validatePersonal(form);
+    if (message) {
+      setError(message);
+      setStep(1);
+      return;
+    }
     if (new Set(choices).size !== 3 || choices.some((item) => !item)) {
-      setError("三个志愿不能重复，请重新选择。");
+      setError("请选择三个不同的志愿部门。");
       setStep(2);
       return;
     }
+    setError("");
+    setStep(3);
+  }
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError("");
+    const formElement = event.currentTarget;
+    const personalMessage = validatePersonal(formElement);
+    if (personalMessage) {
+      setError(personalMessage);
+      setStep(1);
+      return;
+    }
+    if (new Set(choices).size !== 3 || choices.some((item) => !item)) {
+      setError("请选择三个不同的志愿部门。");
+      setStep(2);
+      return;
+    }
+    const consent = formElement.elements.namedItem("consent") as HTMLInputElement | null;
+    if (!consent?.checked) {
+      setError("请勾选信息真实性及招新使用同意项后再提交。");
+      setStep(3);
+      return;
+    }
     setBusy(true);
-    const form = new FormData(event.currentTarget);
+    const form = new FormData(formElement);
     const payload = Object.fromEntries(form.entries());
     try {
       const response = await fetch("/api/applications", {
@@ -57,7 +121,7 @@ export function RecruitmentForm() {
   return (
     <main>
       <header className="hero">
-        <nav><span className="brand-mark">YC</span><span>青年科创中心</span><a href="/admin">工作人员入口</a></nav>
+        <nav><span className="brand-mark"><img src="/qnkczx-logo-v2.png" alt="" /></span><span className="brand-lockup"><strong>对外经济贸易大学青年科创中心</strong><small>Youth Science &amp; Technology Innovation Center</small></span><a href="/admin">工作人员入口</a></nav>
         <div className="hero-copy">
           <p className="eyebrow">2026 · JOIN OUR TEAM</p>
           <h1>让热爱，<br/><em>发生一点新变化。</em></h1>
@@ -80,7 +144,7 @@ export function RecruitmentForm() {
           </ol>
         </div>
 
-        <form onSubmit={submit} className="application-form">
+        <form onSubmit={submit} className="application-form" noValidate>
           <div className={step === 1 ? "panel active" : "panel"}>
             <div className="field-grid">
               <label><span>姓名 *</span><input name="name" required placeholder="请输入真实姓名" /></label>
@@ -94,7 +158,8 @@ export function RecruitmentForm() {
               <label><span>QQ 号</span><input name="qq" inputMode="numeric" placeholder="选填" /></label>
               <label><span>常用邮箱</span><input name="email" type="email" placeholder="选填" /></label>
             </div>
-            <div className="actions"><button type="button" onClick={() => setStep(2)}>下一步 · 选择志愿</button></div>
+            {error && <p className="error" role="alert">{error}</p>}
+            <div className="actions"><button type="button" onClick={(event) => goToChoices(event.currentTarget.form)}>下一步 · 选择志愿</button></div>
           </div>
 
           <div className={step === 2 ? "panel active" : "panel"}>
@@ -110,16 +175,17 @@ export function RecruitmentForm() {
               ))}
             </div>
             <p className="hint">三个志愿须选择不同部门，我们会综合志愿顺序与面试情况进行安排。</p>
-            <div className="actions"><button className="back" type="button" onClick={() => setStep(1)}>上一步</button><button type="button" onClick={() => setStep(3)}>下一步 · 介绍自己</button></div>
+            {error && <p className="error" role="alert">{error}</p>}
+            <div className="actions"><button className="back" type="button" onClick={() => { setError(""); setStep(1); }}>上一步</button><button type="button" onClick={(event) => goToIntroduction(event.currentTarget.form)}>下一步 · 介绍自己</button></div>
           </div>
 
           <div className={step === 3 ? "panel active" : "panel"}>
             <label><span>个人简介</span><textarea name="introduction" placeholder="请简单介绍你的性格、特长、兴趣爱好等（选填）" /></label>
             <label><span>相关经历</span><textarea name="experience" placeholder="社团、学生工作、项目或比赛经历，选填" /></label>
             <label><span>加入青年科创中心的期待</span><textarea name="expectation" placeholder="你希望在这里收获什么？又想带来什么？（选填）" /></label>
-            <label className="consent"><input type="checkbox" required /><span>我确认以上信息真实有效，并同意仅将信息用于本次招新联络与选拔。</span></label>
-            {error && <p className="error">{error}</p>}
-            <div className="actions"><button className="back" type="button" onClick={() => setStep(2)}>上一步</button><button type="submit" disabled={busy}>{busy ? "正在提交…" : "确认提交报名"}</button></div>
+            <label className="consent"><input name="consent" type="checkbox" /><span>我确认以上信息真实有效，并同意仅将信息用于本次招新联络与选拔。</span></label>
+            {error && <p className="error" role="alert">{error}</p>}
+            <div className="actions"><button className="back" type="button" onClick={() => { setError(""); setStep(2); }}>上一步</button><button type="submit" disabled={busy}>{busy ? "正在提交…" : "确认提交报名"}</button></div>
           </div>
         </form>
       </section>

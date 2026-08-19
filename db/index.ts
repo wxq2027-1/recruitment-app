@@ -1,13 +1,19 @@
-import { env } from "cloudflare:workers";
-import { drizzle } from "drizzle-orm/d1";
+import { drizzle } from "drizzle-orm/node-postgres";
+import { Pool } from "pg";
 import * as schema from "./schema";
 
-export function getDb() {
-  if (!env.DB) {
-    throw new Error(
-      "Cloudflare D1 binding `DB` is unavailable. Set the `d1` field in .openai/hosting.json to `DB` or let your control plane inject the real binding values before using the database."
-    );
-  }
+// 创建 PostgreSQL 连接池
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+});
 
-  return drizzle(env.DB, { schema });
+// 使用 Drizzle ORM 包装连接
+export const db = drizzle(pool, { schema });
+
+// 导出连接池
+export { pool };
+
+// 为了兼容原代码中使用的 getDb() 函数
+export function getDb() {
+  return db;
 }
