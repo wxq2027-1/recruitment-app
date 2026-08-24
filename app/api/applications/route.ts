@@ -1,5 +1,4 @@
-import { applications } from "@/db/schema";
-import { getDb } from "@/db";
+import { createApplication } from "@/db/applications";
 
 const departments = ["办公室", "科研立项部", "培训发展部", "对外联络部", "策划宣传部", "赛事组织部"];
 const required = ["name", "gender", "studentId", "college", "majorClass", "phone", "wechat", "choice1", "choice2", "choice3"] as const;
@@ -13,8 +12,7 @@ export async function POST(request: Request) {
     if (new Set(choices).size !== 3 || choices.some((c) => !departments.includes(c))) return Response.json({ error: "志愿选择无效或重复。" }, { status: 400 });
     if (!/^1[3-9]\d{9}$/.test(clean("phone"))) return Response.json({ error: "请输入正确的 11 位手机号码。" }, { status: 400 });
 
-    const db = getDb();
-    await db.insert(applications).values({
+    await createApplication({
       name: clean("name", 40), gender: clean("gender", 10), studentId: clean("studentId", 30),
       college: clean("college", 80), majorClass: clean("majorClass", 80), politicalStatus: clean("politicalStatus", 30) || "群众",
       phone: clean("phone", 20), wechat: clean("wechat", 80), qq: clean("qq", 30), email: clean("email", 120),
@@ -24,7 +22,7 @@ export async function POST(request: Request) {
     return Response.json({ ok: true }, { status: 201 });
   } catch (error) {
     const message = error instanceof Error ? error.message : "";
-    if (message.includes("UNIQUE") || message.includes("student_id")) return Response.json({ error: "该学号已经提交过报名，请勿重复提交。" }, { status: 409 });
+    if (message.includes("DUPLICATE_STUDENT_ID")) return Response.json({ error: "该学号已经提交过报名，请勿重复提交。" }, { status: 409 });
     return Response.json({ error: "系统暂时繁忙，请稍后再试。" }, { status: 500 });
   }
 }
