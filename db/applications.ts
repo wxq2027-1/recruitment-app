@@ -1,4 +1,6 @@
-import { env } from "cloudflare:workers";
+import { existsSync, mkdirSync } from "node:fs";
+import path from "node:path";
+import { DatabaseSync } from "node:sqlite";
 
 export type ApplicationRecord = {
   id: number;
@@ -19,22 +21,6 @@ export type ApplicationRecord = {
   experience: string;
   expectation: string;
   createdAt: string;
-};
-
-type D1RunResult = {
-  success?: boolean;
-  meta?: { changes?: number };
-};
-
-type D1PreparedStatement = {
-  bind(...values: unknown[]): D1PreparedStatement;
-  run(): Promise<D1RunResult>;
-  all<T>(): Promise<{ results?: T[] }>;
-};
-
-type D1Database = {
-  prepare(sql: string): D1PreparedStatement;
-  batch(statements: D1PreparedStatement[]): Promise<unknown>;
 };
 
 const CREATE_APPLICATIONS_TABLE = `
@@ -60,76 +46,68 @@ const CREATE_APPLICATIONS_TABLE = `
   )
 `;
 
-function getDatabase(): D1Database {
-  const database = (env as unknown as { DB?: D1Database }).DB;
-  if (!database) {
-    throw new Error("D1_BINDING_UNAVAILABLE");
-  }
+let database: DatabaseSync | undefined;
+
+function getDatabase() {
+  if (database) return database;
+
+  const productionDataDirectory = "/data";
+  const dataDirectory =
+    process.env.DATA_DIR ||
+    (process.env.NODE_ENV === "production" && existsSync(productionDataDirectory)
+      ? productionDataDirectory
+      : path.join(process.cwd(), ".data"));
+
+  mkdirSync(dataDirectory, { recursive: true });
+  database = new DatabaseSync(path.join(dataDirectory, "recruitment.sqlite"));
+  database.exec("PRAGMA journal_mode = WAL");
+  database.exec("PRAGMA busy_timeout = 5000");
+  database.exec(CREATE_APPLICATIONS_TABLE);
+  database.exec(
+    "CREATE UNIQUE INDEX IF NOT EXISTS applications_student_id_unique ON applications (student_id)",
+  );
+  database.exec(
+    "CREATE INDEX IF NOT EXISTS idx_applications_choice_1 ON applications (choice_1)",
+  );
+  database.exec(
+    "CREATE INDEX IF NOT EXISTS idx_applications_choice_2 ON applications (choice_2)",
+  );
+  database.exec(
+    "CREATE INDEX IF NOT EXISTS idx_applications_choice_3 ON applications (choice_3)",
+  );
   return database;
-}
-
-let schemaReady: Promise<void> | undefined;
-
-function ensureSchema(database: D1Database) {
-  schemaReady ??= database
-    .batch([
-      database.prepare(CREATE_APPLICATIONS_TABLE),
-      database.prepare(
-        "CREATE UNIQUE INDEX IF NOT EXISTS applications_student_id_unique ON applications (student_id)",
-      ),
-      database.prepare(
-        "CREATE INDEX IF NOT EXISTS idx_applications_choice_1 ON applications (choice_1)",
-      ),
-      database.prepare(
-        "CREATE INDEX IF NOT EXISTS idx_applications_choice_2 ON applications (choice_2)",
-      ),
-      database.prepare(
-        "CREATE INDEX IF NOT EXISTS idx_applications_choice_3 ON applications (choice_3)",
-      ),
-    ])
-    .then(() => undefined)
-    .catch((error) => {
-      schemaReady = undefined;
-      throw error;
-    });
-
-  return schemaReady;
 }
 
 export async function createApplication(
   record: Omit<ApplicationRecord, "id" | "createdAt">,
 ) {
-  const database = getDatabase();
-  await ensureSchema(database);
+  const db = getDatabase();
 
   try {
-    await database
-      .prepare(
-        `INSERT INTO applications (
-          name, gender, student_id, college, major_class, political_status,
-          phone, wechat, qq, email, choice_1, choice_2, choice_3,
-          introduction, experience, expectation
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      )
-      .bind(
-        record.name,
-        record.gender,
-        record.studentId,
-        record.college,
-        record.majorClass,
-        record.politicalStatus,
-        record.phone,
-        record.wechat,
-        record.qq,
-        record.email,
-        record.choice1,
-        record.choice2,
-        record.choice3,
-        record.introduction,
-        record.experience,
-        record.expectation,
-      )
-      .run();
+    db.prepare(
+      `INSERT INTO applications (
+        name, gender, student_id, college, major_class, political_status,
+        phone, wechat, qq, email, choice_1, choice_2, choice_3,
+        introduction, experience, expectation
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ).run(
+      record.name,
+      record.gender,
+      record.studentId,
+      record.college,
+      record.majorClass,
+      record.politicalStatus,
+      record.phone,
+      record.wechat,
+      record.qq,
+      record.email,
+      record.choice1,
+      record.choice2,
+      record.choice3,
+      record.introduction,
+      record.experience,
+      record.expectation,
+    );
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     if (
@@ -143,10 +121,8 @@ export async function createApplication(
 }
 
 export async function listApplications() {
-  const database = getDatabase();
-  await ensureSchema(database);
-
-  const { results = [] } = await database
+  const db = getDatabase();
+  return db
     .prepare(
       `SELECT
         id,
@@ -170,19 +146,11 @@ export async function listApplications() {
       FROM applications
       ORDER BY created_at DESC, id DESC`,
     )
-    .all<ApplicationRecord>();
-
-  return results;
+    .all() as unknown as ApplicationRecord[];
 }
 
 export async function deleteApplication(id: number) {
-  const database = getDatabase();
-  await ensureSchema(database);
-
-  const result = await database
-    .prepare("DELETE FROM applications WHERE id = ?")
-    .bind(id)
-    .run();
-
-  return (result.meta?.changes ?? 0) > 0;
+  const db = getDatabase();
+  const result = db.prepare("DELETE FROM applications WHERE id = ?").run(id);
+  return result.changes > 0;
 }
