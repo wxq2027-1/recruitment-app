@@ -148,7 +148,7 @@ export function RecruitmentForm() {
           <div className={step === 1 ? "panel active" : "panel"}>
             <div className="field-grid">
               <label><span>姓名 *</span><input name="name" required placeholder="请输入真实姓名" /></label>
-              <label><span>性别 *</span><select name="gender" required defaultValue=""><option value="" disabled>请选择</option><option>男</option><option>女</option><option>其他</option></select></label>
+              <label><span>性别 *</span><select name="gender" required defaultValue=""><option value="" disabled>请选择</option><option>男</option><option>女</option></select></label>
               <label><span>学号 *</span><input name="studentId" required inputMode="numeric" placeholder="请输入学号" /></label>
               <label><span>学院 *</span><input name="college" required placeholder="例如：中国金融学院" /></label>
               <label><span>专业班级 *</span><input name="majorClass" required placeholder="例如：国金2601" /></label>

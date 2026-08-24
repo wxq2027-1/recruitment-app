@@ -8,6 +8,7 @@ export async function POST(request: Request) {
     const data = (await request.json()) as Record<string, unknown>;
     const clean = (key: string, max = 500) => String(data[key] ?? "").trim().slice(0, max);
     if (required.some((key) => !clean(key))) return Response.json({ error: "请完整填写所有必填项。" }, { status: 400 });
+    if (!["男", "女"].includes(clean("gender"))) return Response.json({ error: "性别选项无效。" }, { status: 400 });
     const choices = [clean("choice1"), clean("choice2"), clean("choice3")];
     if (new Set(choices).size !== 3 || choices.some((c) => !departments.includes(c))) return Response.json({ error: "志愿选择无效或重复。" }, { status: 400 });
     if (!/^1[3-9]\d{9}$/.test(clean("phone"))) return Response.json({ error: "请输入正确的 11 位手机号码。" }, { status: 400 });
